@@ -55,14 +55,18 @@
   .iconbtn{display:inline-flex;align-items:center;gap:7px;color:var(--ink-soft);font-size:13px;font-weight:600;padding:8px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface);transition:.12s}
   .iconbtn:hover{background:var(--surface-2);color:var(--ink)}
   .iconbtn .em{font-size:13px;line-height:0}
+  .navbtns{display:flex;gap:4px}
+  .iconbtn.nav{font-size:18px;line-height:0;padding:7px 12px;color:var(--ink-soft);font-weight:700}
+  .iconbtn.nav:hover{color:var(--pine)}
+  .iconbtn.nav:active{background:var(--pine);color:#F6F4EC;border-color:var(--pine)}
 
-  .board{flex:1 1 auto;overflow-x:auto;overflow-y:hidden;display:flex;align-items:flex-start;gap:18px;padding:24px 26px 40px;scroll-snap-type:x proximity}
+  .board{flex:1 1 auto;overflow-x:auto;overflow-y:hidden;display:flex;align-items:flex-start;gap:18px;padding:24px 26px 40px;overscroll-behavior-x:contain}
   .board::-webkit-scrollbar{height:11px}
   .board::-webkit-scrollbar-thumb{background:var(--line);border-radius:20px;border:3px solid var(--paper)}
   .board::-webkit-scrollbar-track{background:transparent}
 
   .col{flex:0 0 332px;width:332px;max-height:100%;display:flex;flex-direction:column;background:var(--surface);
-    border:1px solid var(--line-soft);border-radius:16px;box-shadow:var(--shadow);scroll-snap-align:start;transition:box-shadow .15s,transform .15s}
+    border:1px solid var(--line-soft);border-radius:16px;box-shadow:var(--shadow);transition:box-shadow .15s,transform .15s}
   .col.drop-target{box-shadow:0 0 0 2px var(--pine),var(--shadow-lift)}
   .col-head{padding:15px 16px 13px;border-bottom:1px solid var(--line-soft);border-radius:16px 16px 0 0;position:relative}
   .col-head .grip{position:absolute;left:6px;top:21px;color:var(--ink-faint);cursor:grab;padding:6px 4px;line-height:0;opacity:0;transition:opacity .15s;font-size:14px;letter-spacing:-3px}
@@ -221,7 +225,7 @@
   @media (max-width:600px){
     .topbar{padding:14px 16px;gap:10px}.board{padding:18px 16px 36px;gap:14px}
     .col{flex-basis:86vw;width:86vw}.saved{display:none}
-    .brand .eyebrow{display:none}.iconbtn{padding:9px 11px}
+    .brand .eyebrow{display:none}.iconbtn{padding:9px 11px}.navbtns{display:none}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -378,6 +382,42 @@ function App({user,onSignOut}){
   const [linkFor,setLinkFor]=useState(null);
   const [showArchive,setShowArchive]=useState(false);
   const saveT=useRef(null), drag=useRef(null), skipSave=useRef(true);
+  const boardRef=useRef(null);
+
+  // smooth horizontal navigation: wheel pans sideways, arrow keys jump by a project
+  useEffect(()=>{
+    const el=boardRef.current; if(!el) return;
+    const step=()=>{ const c=el.querySelector(".col"); return (c?c.getBoundingClientRect().width:332)+18; };
+    const onWheel=(e)=>{
+      if(e.deltaY===0) return;
+      if(Math.abs(e.deltaX)>Math.abs(e.deltaY)) return;            // trackpad sideways: leave it native
+      let n=e.target;                                              // let a long task list scroll first
+      while(n && n!==el){
+        if(n.classList && n.classList.contains("col-body")){
+          const canV=n.scrollHeight>n.clientHeight+1;
+          const atTop=n.scrollTop<=0, atBot=n.scrollTop+n.clientHeight>=n.scrollHeight-1;
+          if(canV && !((e.deltaY<0&&atTop)||(e.deltaY>0&&atBot))) return;
+          break;
+        }
+        n=n.parentElement;
+      }
+      el.scrollLeft+=e.deltaY; e.preventDefault();
+    };
+    const onKey=(e)=>{
+      const t=e.target;
+      if(t && (t.tagName==="INPUT"||t.tagName==="TEXTAREA"||t.isContentEditable)) return;
+      if(e.metaKey||e.ctrlKey||e.altKey) return;
+      if(e.key==="ArrowRight"){ el.scrollBy({left:step(),behavior:"smooth"}); e.preventDefault(); }
+      else if(e.key==="ArrowLeft"){ el.scrollBy({left:-step(),behavior:"smooth"}); e.preventDefault(); }
+      else if(e.key==="Home"){ el.scrollTo({left:0,behavior:"smooth"}); e.preventDefault(); }
+      else if(e.key==="End"){ el.scrollTo({left:el.scrollWidth,behavior:"smooth"}); e.preventDefault(); }
+    };
+    el.addEventListener("wheel",onWheel,{passive:false});
+    window.addEventListener("keydown",onKey);
+    return ()=>{ el.removeEventListener("wheel",onWheel); window.removeEventListener("keydown",onKey); };
+  },[board!==null]);
+
+  const page=(dir)=>{ const el=boardRef.current; if(el) el.scrollBy({left:dir*Math.max(el.clientWidth*0.85,300),behavior:"smooth"}); };
 
   useEffect(()=>{ (async()=>{
     try{
@@ -444,11 +484,15 @@ function App({user,onSignOut}){
       <div className="topbar">
         <div className="brand"><h1>Workbench</h1><span className="eyebrow">project board</span></div>
         <span className={"saved"+(state==="dirty"?" dirty":"")+(state==="error"?" err":"")}><i></i>{statusText}</span>
+        <div className="navbtns">
+          <button className="iconbtn nav" onClick={()=>page(-1)} title="Scroll left (← arrow key)">‹</button>
+          <button className="iconbtn nav" onClick={()=>page(1)} title="Scroll right (→ arrow key)">›</button>
+        </div>
         <button className="iconbtn" onClick={()=>setShowArchive(true)} title="Archive"><span className="em">🗂</span><span className="txt">Archive</span></button>
         <button className="iconbtn" onClick={onSignOut} title="Sign out">Sign out</button>
       </div>
 
-      <div className="board">
+      <div className="board" ref={boardRef}>
         <TodayColumn date={todayDate} tasks={todayTasks} misc={board.todayMisc}
           onCompleteTask={completeTask} onUnstar={unstar}
           onAddMisc={addMisc} onCompleteMisc={completeMisc} onEditMisc={editMisc} onDeleteMisc={deleteMisc}/>
