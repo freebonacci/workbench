@@ -22,6 +22,8 @@
   /* ===== YOUR TWO SETTINGS — paste from Supabase → Project Settings → API ===== */
   window.SUPABASE_URL      = "https://ycfnpvwintoadppxyfdo.supabase.co";
   window.SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InljZm5wdndpbnRvYWRwcHh5ZmRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODIwNDE5ODksImV4cCI6MjA5NzYxNzk4OX0.LfFxrl-HnvW1KHE9gtJixE5r1uHKK8vUDMBG95vBjDM";
+  /* Optional: a private nudge for yourself. Leave "" for none. Shows on the login screen. */
+  window.PASSWORD_HINT     = "courage, honour, ________";
   /* =========================================================================== */
 </script>
 
@@ -175,6 +177,7 @@
   .gate-btn:hover{background:var(--pine-deep)}
   .gate-btn:disabled{opacity:.6;cursor:default}
   .gate-err{color:var(--rose);font-size:13px;margin:12px 0 0;line-height:1.45}
+  .pw-hint{font-family:'Space Mono',monospace;font-size:11.5px;color:var(--ink-faint);letter-spacing:.02em;margin:7px 2px 0}
   .setup-note{font-size:12.5px;color:var(--ink-soft);line-height:1.6;background:var(--surface-2);border-radius:11px;padding:14px 16px;margin-top:18px}
   .setup-note code{font-family:'Space Mono',monospace;font-size:11.5px;background:#fff;border:1px solid var(--line);border-radius:5px;padding:1px 5px}
   .setup-note a{color:var(--pine);font-weight:600}
@@ -199,7 +202,9 @@ const configured = () =>
 
 let sb = null;
 const client = () => {
-  if(!sb) sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY);
+  if(!sb) sb = window.supabase.createClient(window.SUPABASE_URL, window.SUPABASE_ANON_KEY, {
+    auth: { persistSession:true, autoRefreshToken:true, storageKey:"workbench-auth" }
+  });
   return sb;
 };
 const Store = {
@@ -282,22 +287,31 @@ function SetupGate(){
 }
 
 /* ================================ Login ================================ */
+const EMAIL_KEY = "workbench:last-email";
 function Login(){
-  const [email,setEmail] = useState("");
+  const remembered = (()=>{ try{ return localStorage.getItem(EMAIL_KEY)||""; }catch(e){ return ""; } })();
+  const [email,setEmail] = useState(remembered);
   const [pw,setPw] = useState("");
   const [err,setErr] = useState("");
   const [busy,setBusy] = useState(false);
   const emailRef = useRef(null);
-  useEffect(()=>{ emailRef.current && emailRef.current.focus(); },[]);
+  const pwRef = useRef(null);
+  useEffect(()=>{
+    // if we already know the email, jump straight to the password
+    if(remembered && pwRef.current) pwRef.current.focus();
+    else if(emailRef.current) emailRef.current.focus();
+  },[]);
 
   const submit = async()=>{
     if(busy) return;
     setErr(""); setBusy(true);
+    try{ localStorage.setItem(EMAIL_KEY, email.trim()); }catch(e){}
     const {error} = await client().auth.signInWithPassword({email:email.trim(), password:pw});
     if(error){ setErr(error.message || "That didn't work — check your email and password."); setBusy(false); }
     // success → onAuthStateChange flips to the app
   };
 
+  const hint = window.PASSWORD_HINT;
   return (
     <Gate>
       <p className="lead">Sign in to your board.</p>
@@ -308,8 +322,9 @@ function Login(){
       </div>
       <div className="field">
         <label>Password</label>
-        <input type="password" value={pw} placeholder="••••••••"
+        <input ref={pwRef} type="password" value={pw} placeholder="••••••••"
           onChange={e=>setPw(e.target.value)} onKeyDown={e=>{ if(e.key==="Enter") submit(); }}/>
+        {hint && <p className="pw-hint">{hint}</p>}
       </div>
       <button className="gate-btn" onClick={submit} disabled={busy}>{busy?"Signing in…":"Sign in"}</button>
       {err && <p className="gate-err">{err}</p>}
