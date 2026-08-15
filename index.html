@@ -176,6 +176,12 @@
   .btn-ghost:hover{background:var(--line-soft);color:var(--ink)}
   .btn-solid{background:var(--pine);color:#F6F4EC;box-shadow:0 1px 0 var(--pine-deep)}
   .btn-solid:hover{background:var(--pine-deep)}
+  .backup-stat{font-family:'Space Mono',monospace;font-size:11px;color:var(--ink-soft);background:var(--surface-2);border:1px solid var(--line-soft);border-radius:8px;padding:9px 11px;margin-bottom:15px}
+  .backup-btn{display:flex;align-items:center;justify-content:center;gap:9px;width:100%;padding:12px;border-radius:11px;font-size:14px;font-weight:600;margin-bottom:10px;transition:.12s;background:var(--pine);color:#F6F4EC;box-shadow:0 1px 0 var(--pine-deep)}
+  .backup-btn span{font-size:16px;line-height:0}
+  .backup-btn:hover{background:var(--pine-deep)}
+  .backup-btn.ghost{background:var(--surface-2);color:var(--ink);box-shadow:none;border:1px solid var(--line)}
+  .backup-btn.ghost:hover{background:var(--line-soft)}
 
   .arch{background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow-lift);width:100%;max-width:540px;max-height:82vh;display:flex;flex-direction:column;overflow:hidden}
   .arch-top{padding:22px 24px 16px;border-bottom:1px solid var(--line-soft);display:flex;align-items:flex-start}
@@ -406,6 +412,7 @@ function App({user,onSignOut}){
   const [state,setState]=useState("loading");
   const [linkFor,setLinkFor]=useState(null);
   const [showArchive,setShowArchive]=useState(false);
+  const [showBackup,setShowBackup]=useState(false);
   const saveT=useRef(null), drag=useRef(null), skipSave=useRef(true);
   const boardRef=useRef(null);
 
@@ -498,6 +505,26 @@ function App({user,onSignOut}){
   });
   const deleteArchive=(eid)=> setBoard(b=>({...b,archive:b.archive.filter(x=>x.id!==eid)}));
 
+  const exportData=()=>{
+    const blob=new Blob([JSON.stringify(board,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");
+    a.href=url; a.download="workbench-backup-"+new Date().toISOString().slice(0,10)+".json";
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  };
+  const importData=(file)=>{
+    const reader=new FileReader();
+    reader.onload=()=>{
+      let parsed;
+      try{ parsed=JSON.parse(reader.result); }
+      catch(e){ alert("That file couldn't be read (it isn't valid JSON)."); return; }
+      if(!parsed || !Array.isArray(parsed.projects)){ alert("That doesn't look like a Workbench backup."); return; }
+      if(!confirm("Load this backup? It replaces the board currently on this database.")) return;
+      setBoard(normalize(parsed)); setShowBackup(false);
+    };
+    reader.readAsText(file);
+  };
+
   if(board===null) return <Gate><p className="lead">Opening your board…</p></Gate>;
 
   const todayTasks=board.projects.flatMap(p=>p.tasks.filter(t=>t.today).map(t=>({id:t.id,text:t.text,projectId:p.id,tag:p.name})));
@@ -513,6 +540,7 @@ function App({user,onSignOut}){
           <button className="iconbtn nav" onClick={()=>page(-1)} title="Scroll left (← arrow key)">‹</button>
           <button className="iconbtn nav" onClick={()=>page(1)} title="Scroll right (→ arrow key)">›</button>
         </div>
+        <button className="iconbtn" onClick={()=>setShowBackup(true)} title="Backup & restore"><span className="em">💾</span><span className="txt">Backup</span></button>
         <button className="iconbtn" onClick={()=>setShowArchive(true)} title="Archive"><span className="em">🗂</span><span className="txt">Archive</span></button>
         <button className="iconbtn" onClick={onSignOut} title="Sign out">Sign out</button>
       </div>
@@ -538,6 +566,30 @@ function App({user,onSignOut}){
       }}/>}
 
       {showArchive && <Archive archive={board.archive} onClose={()=>setShowArchive(false)} onRestore={restore} onDelete={deleteArchive}/>}
+
+      {showBackup && <BackupModal board={board} onClose={()=>setShowBackup(false)} onExport={exportData} onImport={importData}/>}
+    </div>
+  );
+}
+
+/* ================================ Backup / restore ================================ */
+function BackupModal({board,onClose,onExport,onImport}){
+  const fileRef=useRef(null);
+  const projects=board.projects.length;
+  const tasks=board.projects.reduce((n,p)=>n+p.tasks.length,0);
+  const archived=board.archive.length;
+  return (
+    <div className="scrim" onClick={onClose}>
+      <div className="modal" onClick={e=>e.stopPropagation()}>
+        <h3>Backup &amp; restore</h3>
+        <p className="sub">Save everything to a file, or load a file back in — this is how you move your board to a different database.</p>
+        <div className="backup-stat">{projects} projects · {tasks} tasks · {archived} archived</div>
+        <button className="backup-btn" onClick={onExport}><span>⤓</span> Download a backup</button>
+        <button className="backup-btn ghost" onClick={()=>fileRef.current&&fileRef.current.click()}><span>⤒</span> Restore from a file…</button>
+        <input ref={fileRef} type="file" accept="application/json,.json" style={{display:"none"}}
+          onChange={e=>{ const f=e.target.files&&e.target.files[0]; if(f) onImport(f); e.target.value=""; }}/>
+        <div className="modal-actions"><button className="btn-ghost" onClick={onClose}>Close</button></div>
+      </div>
     </div>
   );
 }
