@@ -131,7 +131,6 @@ function StreamCard({ s, idx }) {
         <div className="stream-t">
           <span className="emoji">{s.emoji}</span>
           <span>{s.title}</span>
-          {s.private && <span title="Private">🔒</span>}
         </div>
         <div className="stream-meta">
           <span>{tasks.length} open</span>
@@ -192,10 +191,10 @@ function StreamCard({ s, idx }) {
       })}
       <input
         className="add-input"
-        placeholder="+ Add item (Enter = planning, Shift+Enter = in progress)"
+        placeholder="+ Add item"
         value={adding}
         onChange={(e) => setAdding(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && add(e.shiftKey ? "standup" : "planning")}
+        onKeyDown={(e) => e.key === "Enter" && add("planning")}
       />
     </div>
   );

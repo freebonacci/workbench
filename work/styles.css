@@ -373,3 +373,20 @@ select{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background
 .inline-input.emoji-in{width:44px;flex:0 0 44px}
 .prio-h .prio-t{flex:1 1 auto}
 .seg.who{display:flex}.seg.who .seg-b{flex:1;padding:8px;font-size:14px}
+
+/* ---------- simplified shell + item pop-up ---------- */
+.me-btn{padding:7px 13px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-weight:600;font-size:13px}
+.me-btn:hover{background:var(--surface-2)}
+.saved{font-family:inherit;font-size:12px;letter-spacing:0;color:var(--ink-soft)}
+.saved.error{color:var(--rose);font-weight:600}
+.modal-h h3{font-family:inherit;font-weight:600;font-size:13px;color:var(--ink-soft)}
+.ed-crumbs{display:flex;flex-wrap:wrap;gap:2px 6px}
+.ed-crumbs button{color:var(--ink-soft);font-weight:600}
+.ed-crumbs button:hover{color:var(--pine)}
+.ed-crumbs button+button:before{content:"›";margin-right:6px;color:var(--ink-faint)}
+.editor{display:flex;flex-direction:column;gap:14px}
+.ed-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+.ed-grid .field:first-child{grid-column:1/-1}
+.ed-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line-soft);padding-top:12px}
+.clip.plain{background:var(--surface-2);border-color:var(--line)}
+@media (max-width:700px){.ed-grid{grid-template-columns:1fr}}

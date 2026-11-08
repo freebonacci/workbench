@@ -3,17 +3,17 @@ import { createRoot } from "react-dom/client";
 import { Store, DEMO } from "./store.js";
 import { PASSWORD_HINT, WORK_USERS } from "./config.js";
 import { useDatabase, DBContext, KINDS } from "./db.js";
-import { AppContext, ItemPanel } from "./item.jsx";
-import { Popover, Avatar } from "./ui.jsx";
-import { descendants, isClosed, todayISO } from "./logic.js";
+import { AppContext, ItemEditor } from "./item.jsx";
+import { Popover } from "./ui.jsx";
+import { todayISO } from "./logic.js";
 import { Planner } from "./views/planner.jsx";
 import { People } from "./views/people.jsx";
 import { Gantt } from "./views/gantt.jsx";
 import { ListView, Priorities, Completed, Meetings, Mentorship } from "./views/pages.jsx";
 
 const PAGES = [
-  ["priorities", "Priorities"],
   ["planner", "Planner"],
+  ["priorities", "Priorities"],
   ["people", "People"],
   ["gantt", "Gantt"],
   ["list", "Deadlines"],
@@ -113,15 +113,7 @@ function App({ me, onSignOut }) {
   const [page, setPageState] = useState(() => (location.hash.slice(1).split("/")[0] || "planner"));
   const [pageArg, setPageArg] = useState(null);
   const [itemId, setItemId] = useState(null);
-  const [focus, setFocus] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem("wb-focus") || "null");
-    } catch (e) {
-      return null;
-    }
-  });
   const [menu, setMenu] = useState(false);
-  const [focusOpen, setFocusOpen] = useState(false);
 
   const setPage = useCallback((p, arg = null) => {
     setPageState(p);
@@ -134,36 +126,18 @@ function App({ me, onSignOut }) {
     return () => window.removeEventListener("hashchange", h);
   }, []);
   useEffect(() => {
-    try {
-      localStorage.setItem("wb-focus", JSON.stringify(focus));
-    } catch (e) {}
-  }, [focus]);
-  useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(null), 9000);
     return () => clearTimeout(t);
   }, [toast, setToast]);
 
-  // focus filter: a person or a saved group
-  const focusIds = useMemo(() => {
-    if (!focus) return null;
-    if (focus.type === "person") return db.person[focus.id] ? [focus.id] : null;
-    if (focus.type === "group") return db.group[focus.id]?.person_ids || null;
-    return null;
-  }, [focus, db.person, db.group]);
+  // (the person/group filter was removed to keep things simple; pages still accept this hook)
   const focusMatch = useMemo(() => {
-    const f = (it, deep = false) => {
-      if (!focusIds) return true;
-      if ((it.owners || []).some((o) => focusIds.includes(o))) return true;
-      if (deep) return descendants(db.item, it.id).some((d) => !isClosed(db.item, d) && (d.owners || []).some((o) => focusIds.includes(o)));
-      return false;
-    };
-    f.active = !!focusIds;
+    const f = () => true;
+    f.active = false;
     return f;
-  }, [focusIds, db.item]);
-  const focusLabel = focus?.type === "person" ? db.person[focus.id]?.name : focus?.type === "group" ? db.group[focus.id]?.name : null;
-
-  const appCtx = { openItem: setItemId, setPage, focusMatch, focusActive: !!focusIds, page };
+  }, []);
+  const appCtx = { openItem: setItemId, setPage, focusMatch, focusActive: false, page };
 
   const exportJSON = () => {
     const rows = [];
@@ -194,8 +168,6 @@ function App({ me, onSignOut }) {
     inp.click();
   };
 
-  const groups = Object.values(db.group);
-  const people = Object.values(db.person).filter((p) => !p.archived).sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0));
 
   return (
     <DBContext.Provider value={dbApi}>
@@ -214,64 +186,33 @@ function App({ me, onSignOut }) {
               ))}
             </nav>
             <div className="top-r">
+              {status !== "saved" && status !== "loading" && (
+                <span className={"saved " + status}>{status === "saving" ? "Saving…" : "⚠ Not saved yet — retrying"}</span>
+              )}
               <div className="rel">
-                <button className={"focus-btn" + (focusLabel ? " on" : "")} onClick={() => setFocusOpen(!focusOpen)} title="Show only items for a person or group">
-                  {focusLabel ? <>👁 {focusLabel}</> : "👁 Everyone"}
-                </button>
-                <Popover open={focusOpen} onClose={() => setFocusOpen(false)} anchor="right">
-                  <div className="pop-list">
-                    <button className="pop-row" onClick={() => (setFocus(null), setFocusOpen(false))}>
-                      Everyone
-                    </button>
-                    {groups.map((g) => (
-                      <button key={g.id} className="pop-row" onClick={() => (setFocus({ type: "group", id: g.id }), setFocusOpen(false))}>
-                        👥 {g.name}
-                      </button>
-                    ))}
-                    {people.map((p) => (
-                      <button key={p.id} className="pop-row" onClick={() => (setFocus({ type: "person", id: p.id }), setFocusOpen(false))}>
-                        <Avatar person={p} size={18} /> {p.name}
-                      </button>
-                    ))}
-                  </div>
-                </Popover>
-              </div>
-              <span className={"saved " + status} title={status === "error" ? "Couldn't save — retrying" : ""}>
-                <i />
-                {status === "saving" ? "Saving" : status === "error" ? "Offline" : status === "loading" ? "Loading" : "Saved"}
-              </span>
-              <div className="rel">
-                <button className="iconbtn" onClick={() => setMenu(!menu)} aria-label="Menu">
-                  ⋯
+                <button className="me-btn" onClick={() => setMenu(!menu)}>
+                  {me || "Menu"} ▾
                 </button>
                 <Popover open={menu} onClose={() => setMenu(false)} anchor="right">
                   <div className="pop-list">
                     <button className="pop-row" onClick={() => (exportJSON(), setMenu(false))}>
-                      ⬇ Export backup (JSON)
+                      Download a backup
                     </button>
                     <button className="pop-row" onClick={() => (importJSON(), setMenu(false))}>
-                      ⬆ Import / replace from JSON…
+                      Load data from a file…
                     </button>
                     <a className="pop-row" href="../">
-                      ↩ Personal Workbench
+                      Go to my personal Workbench
                     </a>
                     <button className="pop-row" onClick={onSignOut}>
-                      Sign out{me ? ` (${me})` : ""}
+                      Sign out
                     </button>
                   </div>
                 </Popover>
               </div>
             </div>
           </header>
-          {focusLabel && page !== "people" && page !== "meetings" && page !== "mentorship" && (
-            <div className="focus-bar">
-              Showing items for <b>{focusLabel}</b> only.{" "}
-              <button className="link" onClick={() => setFocus(null)}>
-                Show everyone
-              </button>
-            </div>
-          )}
-          <main className={"main" + (itemId ? " with-panel" : "")}>
+          <main className="main">
             <div className="content">
               <Boundary page={page}>
               {page === "priorities" && <Priorities />}
@@ -284,7 +225,7 @@ function App({ me, onSignOut }) {
               {page === "completed" && <Completed />}
               </Boundary>
             </div>
-            {itemId && db.item[itemId] && <ItemPanel key={itemId} id={itemId} onClose={() => setItemId(null)} />}
+            {itemId && db.item[itemId] && <ItemEditor key={itemId} id={itemId} onClose={() => setItemId(null)} />}
           </main>
           {toast && (
             <div className="toast" key={toast.id}>

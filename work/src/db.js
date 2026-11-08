@@ -26,7 +26,14 @@ export function useDatabase(enabled) {
     const rows = await Store.loadAll();
     const next = empty();
     rows.forEach((r) => {
-      if (next[r.kind]) next[r.kind][r.id] = { ...r.data, id: r.id };
+      if (!next[r.kind]) return;
+      const d = { ...r.data, id: r.id };
+      // older data had a separate "shared description"; it now lives in Notes
+      if (r.kind === "item" && d.description) {
+        d.notes = d.notes ? d.description + "\n\n" + d.notes : d.description;
+        d.description = "";
+      }
+      next[r.kind][r.id] = d;
     });
     setDb(next);
     setStatus("saved");

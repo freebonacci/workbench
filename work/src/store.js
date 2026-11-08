@@ -112,10 +112,3 @@ const demoStore = {
 };
 
 export const Store = DEMO ? demoStore : supabaseStore;
-
-export async function fetchShare(token) {
-  if (DEMO) return null;
-  const { data, error } = await client().rpc("get_share", { t: token });
-  if (error) throw error;
-  return data;
-}

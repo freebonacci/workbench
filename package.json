@@ -2,8 +2,8 @@
   "name": "workbench",
   "private": true,
   "scripts": {
-    "build": "esbuild work/src/main.jsx work/src/share.jsx --minify --bundle --format=iife --target=es2019 --outdir=work/dist --jsx=automatic --loader:.js=jsx",
-    "watch": "esbuild work/src/main.jsx work/src/share.jsx --bundle --format=iife --target=es2019 --outdir=work/dist --jsx=automatic --loader:.js=jsx --watch"
+    "build": "esbuild work/src/main.jsx --minify --bundle --format=iife --target=es2019 --outdir=work/dist --jsx=automatic --loader:.js=jsx",
+    "watch": "esbuild work/src/main.jsx --bundle --format=iife --target=es2019 --outdir=work/dist --jsx=automatic --loader:.js=jsx --watch"
   },
   "devDependencies": {
     "@supabase/supabase-js": "^2.45.4",
