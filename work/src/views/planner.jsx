@@ -5,10 +5,9 @@ import { TaskRow, useApp } from "../item.jsx";
 import { Empty } from "../ui.jsx";
 
 const GROUPS = [
-  ["standup", "In progress · standup"],
-  ["mature", "In progress · mature"],
-  ["planning", "Planning"],
-  ["someday", "Someday"],
+  ["planning", "To plan"],
+  ["standup", "Starting"],
+  ["mature", "Progressing"],
 ];
 
 export function Planner() {
@@ -38,7 +37,7 @@ export function Planner() {
     const a = create("item", { kind: "area", parent_id: null, title: m ? m[2] : t, emoji: m ? m[1] : "", sort: areas.length });
     pick(a.id);
   };
-  const openCount = (a) => descendants(items, a.id, idx).filter((d) => d.kind === "task" && !isClosed(items, d) && focusMatch(d)).length;
+  const openCount = (a) => descendants(items, a.id, idx).filter((d) => d.kind === "task" && !isClosed(items, d) && d.status !== "someday" && focusMatch(d)).length;
 
   return (
     <div className="page planner">
@@ -98,14 +97,16 @@ function StreamCard({ s, idx }) {
   const { db, create, updateItem, patch } = useDB();
   const { focusMatch, openItem, focusActive } = useApp();
   const items = db.item;
-  const tasks = (idx[s.id] || []).filter((t) => t.kind === "task" && t.status !== "complete");
+  const all = (idx[s.id] || []).filter((t) => t.kind === "task" && t.status !== "complete");
+  const parked = all.filter((t) => t.status === "someday").length;
+  const tasks = all.filter((t) => t.status !== "someday");
   const visible = tasks.filter((t) => focusMatch(t, true));
-  const [showSomeday, setShowSomeday] = useState(false);
+  const { setPage } = useApp();
   const [adding, setAdding] = useState("");
   const [over, setOver] = useState(null);
   const span = spanOf(items, s.id, idx);
   const done = (idx[s.id] || []).filter((t) => t.status === "complete").length;
-  const overdue = descendants(items, s.id, idx).filter((d) => d.kind === "task" && !isClosed(items, d) && d.due && d.due < todayISO()).length;
+  const overdue = descendants(items, s.id, idx).filter((d) => d.kind === "task" && !isClosed(items, d) && d.status !== "someday" && d.due && d.due < todayISO()).length;
   const prios = (s.priority_ids || []).map((p) => db.priority[p]).filter(Boolean);
   if (focusActive && !visible.length) return null;
 
@@ -154,8 +155,6 @@ function StreamCard({ s, idx }) {
       </div>
       {GROUPS.map(([st, label]) => {
         const list = visible.filter((t) => (t.status || "planning") === st);
-        if (st === "someday" && !list.length) return null;
-        const collapsed = st === "someday" && !showSomeday;
         if (!list.length && st !== "planning")
           return (
             <div
@@ -176,14 +175,12 @@ function StreamCard({ s, idx }) {
             onDragLeave={() => setOver(null)}
             onDrop={(e) => drop(e, st)}
           >
-            <button className="sgroup-h" onClick={() => st === "someday" && setShowSomeday(!showSomeday)}>
+            <div className="sgroup-h">
               <span className={"dot st-" + st} />
               {label}
               <span className="count">{list.length}</span>
-              {st === "someday" && <span className="muted small">{collapsed ? "show" : "hide"}</span>}
-            </button>
-            {!collapsed &&
-              list.map((t) => (
+            </div>
+            {list.map((t) => (
                 <TaskRow key={t.id} it={t} draggable onDragStart={(e) => e.dataTransfer.setData("text/item", t.id)} />
               ))}
           </div>
@@ -196,6 +193,11 @@ function StreamCard({ s, idx }) {
         onChange={(e) => setAdding(e.target.value)}
         onKeyDown={(e) => e.key === "Enter" && add("planning")}
       />
+      {parked > 0 && (
+        <button className="parked-link" onClick={() => setPage("someday")}>
+          💤 {parked} parked on Someday
+        </button>
+      )}
     </div>
   );
 }

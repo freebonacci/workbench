@@ -12,7 +12,7 @@ export function People() {
   const people = Object.values(db.person).filter((p) => !p.archived).sort(sortPeople);
   const [managing, setManaging] = useState(false);
   const [hideEmpty, setHideEmpty] = useState(true);
-  const tasks = useMemo(() => openTasks(db.item), [db.item]);
+  const tasks = useMemo(() => openTasks(db.item).filter((t) => t.status !== "someday"), [db.item]);
   const byPerson = (pid) => tasks.filter((t) => (t.owners || []).includes(pid));
   const shown = people.filter((p) => !hideEmpty || byPerson(p.id).length);
 

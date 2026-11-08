@@ -15,7 +15,7 @@ export function ListView() {
     () =>
       openTasks(db.item)
         .filter((t) => focusMatch(t))
-        .filter((t) => (status === "all" ? true : status === "active" ? t.status !== "someday" : t.status === status)),
+        .filter((t) => (status === "active" ? t.status !== "someday" : t.status === status)),
     [db.item, focusMatch, status]
   );
   return (
@@ -23,12 +23,10 @@ export function ListView() {
       <div className="toolbar">
         <div className="seg">
           {[
-            ["active", "Active"],
-            ["standup", "Standup"],
-            ["mature", "Mature"],
-            ["planning", "Planning"],
-            ["someday", "Someday"],
-            ["all", "All open"],
+            ["active", "Everything live"],
+            ["planning", "To plan"],
+            ["standup", "Starting"],
+            ["mature", "Progressing"],
           ].map(([k, l]) => (
             <button key={k} className={"seg-b" + (status === k ? " on" : "")} onClick={() => setStatus(k)}>
               {l}
@@ -207,6 +205,119 @@ function LinkStreams({ p, onClose }) {
     </div>
   );
 }
+
+/* =============================== SOMEDAY =============================== */
+export function Someday() {
+  const { db, create, updateItem } = useDB();
+  const { openItem } = useApp();
+  const items = db.item;
+  const idx = useMemo(() => childrenIndex(items), [items]);
+  const parked = Object.values(items).filter((i) => i.kind === "task" && i.status === "someday" && !isClosed(items, i));
+  // only top-most parked items (a parked sub-item under a parked item shows inside it)
+  const tops = parked.filter((i) => !ancestorsParked(items, i));
+  const streams = Object.values(items).filter((i) => i.kind === "stream" && !isClosed(items, i));
+  const order = new Map();
+  let n = 0;
+  const walk = (pid) => (idx[pid] || []).forEach((c) => (order.set(c.id, n++), walk(c.id)));
+  walk("");
+  const groups = new Map();
+  for (const t of tops) {
+    const anc = [...pathOf(items, t)];
+    const s = anc.reverse().find((a) => a.kind === "stream" || a.kind === "area");
+    const k = s ? s.id : "";
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(t);
+  }
+  const [text, setText] = useState("");
+  const [where, setWhere] = useState(() => {
+    try {
+      return localStorage.getItem("wb-someday-where") || "";
+    } catch (e) {
+      return "";
+    }
+  });
+  const target = items[where] && items[where].kind === "stream" ? where : streams.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))[0]?.id;
+  const add = () => {
+    const t = text.trim();
+    if (!t || !target) return;
+    create("item", { kind: "task", parent_id: target, title: t, status: "someday", owners: [], start: todayISO(), due: null, blocked_by: [], sort: Date.now() });
+    setText("");
+  };
+  const label = (id) => {
+    const s = items[id];
+    if (!s) return "Other";
+    const a = s.kind === "stream" ? items[s.parent_id] : null;
+    return (a ? (a.emoji ? a.emoji + " " : "") + a.title + " › " : "") + (s.emoji ? s.emoji + " " : "") + s.title;
+  };
+  return (
+    <div className="page someday">
+      <div className="toolbar">
+        <p className="muted small">Big ideas and items we've parked for later. Nothing here shows on the Planner, People, Deadlines or Gantt until you bring it back.</p>
+      </div>
+      <div className="someday-add">
+        <input placeholder="Park a new idea… (press Enter)" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
+        <select
+          value={target || ""}
+          onChange={(e) => {
+            setWhere(e.target.value);
+            try {
+              localStorage.setItem("wb-someday-where", e.target.value);
+            } catch (er) {}
+          }}
+          title="Which workstream it belongs to"
+        >
+          {streams
+            .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+            .map((s) => (
+              <option key={s.id} value={s.id}>
+                {label(s.id)}
+              </option>
+            ))}
+        </select>
+      </div>
+      {[...groups.entries()]
+        .sort((a, b) => (order.get(a[0]) ?? 1e9) - (order.get(b[0]) ?? 1e9))
+        .map(([k, l]) => (
+          <section key={k} className="lbucket">
+            <h3>
+              {label(k)} <span className="count">{l.length}</span>
+            </h3>
+            <div className="lrows">
+              {l.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  it={t}
+                  extra={
+                    <button
+                      className="link small"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        updateItem(t.id, { status: "planning", start: todayISO() });
+                      }}
+                    >
+                      ↩ Bring back (To plan)
+                    </button>
+                  }
+                />
+              ))}
+            </div>
+          </section>
+        ))}
+      {!tops.length && <Empty>Nothing parked. Set any item's status to Someday to move it here.</Empty>}
+    </div>
+  );
+}
+const pathOf = (items, it) => {
+  const out = [];
+  let cur = items[it.parent_id];
+  let g = 0;
+  while (cur && g++ < 50) {
+    out.unshift(cur);
+    cur = items[cur.parent_id];
+  }
+  return out;
+};
+const ancestorsParked = (items, it) => pathOf(items, it).some((a) => a.kind === "task" && a.status === "someday");
 
 /* =============================== COMPLETED =============================== */
 export function Completed() {

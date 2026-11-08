@@ -9,7 +9,7 @@ import { todayISO } from "./logic.js";
 import { Planner } from "./views/planner.jsx";
 import { People } from "./views/people.jsx";
 import { Gantt } from "./views/gantt.jsx";
-import { ListView, Priorities, Completed, Meetings, Mentorship } from "./views/pages.jsx";
+import { ListView, Priorities, Completed, Meetings, Mentorship, Someday } from "./views/pages.jsx";
 
 const PAGES = [
   ["planner", "Planner"],
@@ -17,6 +17,7 @@ const PAGES = [
   ["people", "People"],
   ["gantt", "Gantt"],
   ["list", "Deadlines"],
+  ["someday", "Someday"],
   ["meetings", "Meetings"],
   ["mentorship", "Mentorship"],
   ["completed", "Completed"],
@@ -223,6 +224,7 @@ function App({ me, onSignOut }) {
               {page === "meetings" && <Meetings />}
               {page === "mentorship" && <Mentorship personId={pageArg} />}
               {page === "completed" && <Completed />}
+              {page === "someday" && <Someday />}
               </Boundary>
             </div>
             {itemId && db.item[itemId] && <ItemEditor key={itemId} id={itemId} onClose={() => setItemId(null)} />}

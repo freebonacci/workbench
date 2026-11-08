@@ -390,3 +390,11 @@ select{padding:6px 8px;border:1px solid var(--line);border-radius:8px;background
 .ed-foot{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--line-soft);padding-top:12px}
 .clip.plain{background:var(--surface-2);border-color:var(--line)}
 @media (max-width:700px){.ed-grid{grid-template-columns:1fr}}
+
+/* ---------- someday ---------- */
+.parked-link{display:block;width:100%;text-align:left;margin-top:8px;padding:4px 8px;font-size:12px;color:var(--ink-soft);border-radius:7px}
+.parked-link:hover{background:var(--surface-2);color:var(--pine)}
+.someday-add{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.someday-add input{flex:1 1 320px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:14px}
+.someday-add select{flex:0 1 340px;max-width:100%}
+.seg-b.st-someday{margin-left:8px;border-left:1px solid var(--line);border-radius:0 8px 8px 0}

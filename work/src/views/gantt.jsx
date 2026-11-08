@@ -22,7 +22,7 @@ export function Gantt() {
   useEffect(() => lsSet("wb-gantt-group", groupBy), [groupBy]);
   useEffect(() => lsSet("wb-gantt-zoom", zoom), [zoom]);
 
-  const all = useMemo(() => openTasks(items).filter((t) => focusMatch(t)), [items, focusMatch]);
+  const all = useMemo(() => openTasks(items).filter((t) => t.status !== "someday" && focusMatch(t)), [items, focusMatch]);
   const dated = all.filter((t) => t.due);
   const undated = all.length - dated.length;
 

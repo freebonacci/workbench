@@ -55,11 +55,11 @@ export const BUCKETS = [
 
 /* ---------------- statuses ---------------- */
 export const STATUSES = [
-  { id: "planning", label: "Planning", hint: "Agreed it needs doing, not started" },
-  { id: "standup", label: "Standup", hint: "In progress — not yet at initial implementation" },
-  { id: "mature", label: "Mature", hint: "Implemented — monitoring as it becomes permanent" },
-  { id: "someday", label: "Someday", hint: "Parked" },
+  { id: "planning", label: "To plan", hint: "Agreed it needs doing, not started" },
+  { id: "standup", label: "Starting", hint: "Under way — not yet at initial implementation" },
+  { id: "mature", label: "Progressing", hint: "Implemented — monitoring as it becomes permanent" },
   { id: "complete", label: "Complete", hint: "Done" },
+  { id: "someday", label: "Someday", hint: "Parked for later — lives on the Someday page" },
 ];
 export const STATUS = Object.fromEntries(STATUSES.map((s) => [s.id, s]));
 
