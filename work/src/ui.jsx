@@ -177,8 +177,15 @@ export function Modal({ title, onClose, children, wide, footer }) {
   );
 }
 
-export function AutoText({ value, onChange, placeholder, className = "", minRows = 2, onBlur }) {
+export function AutoText({ value, onChange, placeholder, className = "", minRows = 2, onBlur, autoFocus }) {
   const ref = useRef(null);
+  useEffect(() => {
+    if (!autoFocus || !ref.current) return;
+    const el = ref.current;
+    el.focus();
+    el.setSelectionRange(el.value.length, el.value.length);
+    // eslint-disable-next-line
+  }, []);
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;

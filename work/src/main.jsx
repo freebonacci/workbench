@@ -113,7 +113,12 @@ function App({ me, onSignOut }) {
   const { db, status, toast, setToast } = dbApi;
   const [page, setPageState] = useState(() => (location.hash.slice(1).split("/")[0] || "planner"));
   const [pageArg, setPageArg] = useState(null);
-  const [itemId, setItemId] = useState(null);
+  const [itemId, setItemIdState] = useState(null);
+  const [freshId, setFreshId] = useState(null);
+  const setItemId = useCallback((id, opts = {}) => {
+    setItemIdState(id);
+    setFreshId(opts.fresh ? id : null);
+  }, []);
   const [menu, setMenu] = useState(false);
 
   const setPage = useCallback((p, arg = null) => {
@@ -227,7 +232,7 @@ function App({ me, onSignOut }) {
               {page === "someday" && <Someday />}
               </Boundary>
             </div>
-            {itemId && db.item[itemId] && <ItemEditor key={itemId} id={itemId} onClose={() => setItemId(null)} />}
+            {itemId && db.item[itemId] && <ItemEditor key={itemId} id={itemId} fresh={freshId === itemId} onClose={() => setItemId(null)} />}
           </main>
           {toast && (
             <div className="toast" key={toast.id}>

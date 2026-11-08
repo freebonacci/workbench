@@ -110,11 +110,12 @@ function StreamCard({ s, idx }) {
   const prios = (s.priority_ids || []).map((p) => db.priority[p]).filter(Boolean);
   if (focusActive && !visible.length) return null;
 
-  const add = (status) => {
+  const add = (status, withDetails = false) => {
     const t = adding.trim();
-    if (!t) return;
-    create("item", { kind: "task", parent_id: s.id, title: t, status, owners: [], start: todayISO(), due: null, blocked_by: [], sort: Date.now() });
+    if (!t && !withDetails) return;
+    const row = create("item", { kind: "task", parent_id: s.id, title: t, status, owners: [], start: todayISO(), due: null, blocked_by: [], sort: Date.now() });
     setAdding("");
+    if (withDetails) openItem(row.id, { fresh: true });
   };
   const drop = (e, status) => {
     e.preventDefault();
@@ -186,13 +187,12 @@ function StreamCard({ s, idx }) {
           </div>
         );
       })}
-      <input
-        className="add-input"
-        placeholder="+ Add item"
-        value={adding}
-        onChange={(e) => setAdding(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && add("planning")}
-      />
+      <div className="add-row">
+        <input className="add-input" placeholder="+ Add item" value={adding} onChange={(e) => setAdding(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add("planning")} />
+        <button className="add-details" onClick={() => add("planning", true)} title="Add and fill in owner, deadline, etc. now">
+          Details…
+        </button>
+      </div>
       {parked > 0 && (
         <button className="parked-link" onClick={() => setPage("someday")}>
           💤 {parked} parked on Someday

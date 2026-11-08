@@ -237,11 +237,12 @@ export function Someday() {
     }
   });
   const target = items[where] && items[where].kind === "stream" ? where : streams.sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))[0]?.id;
-  const add = () => {
+  const add = (withDetails = false) => {
     const t = text.trim();
-    if (!t || !target) return;
-    create("item", { kind: "task", parent_id: target, title: t, status: "someday", owners: [], start: todayISO(), due: null, blocked_by: [], sort: Date.now() });
+    if ((!t && !withDetails) || !target) return;
+    const row = create("item", { kind: "task", parent_id: target, title: t, status: "someday", owners: [], start: todayISO(), due: null, blocked_by: [], sort: Date.now() });
     setText("");
+    if (withDetails) openItem(row.id, { fresh: true });
   };
   const label = (id) => {
     const s = items[id];
@@ -256,6 +257,9 @@ export function Someday() {
       </div>
       <div className="someday-add">
         <input placeholder="Park a new idea… (press Enter)" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => e.key === "Enter" && add()} />
+        <button className="btn ghost" onClick={() => add(true)}>
+          Details…
+        </button>
         <select
           value={target || ""}
           onChange={(e) => {

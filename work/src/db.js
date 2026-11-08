@@ -236,7 +236,7 @@ export function useDatabase(enabled) {
   );
 
   const deleteItem = useCallback(
-    (id) => {
+    (id, { quiet = false } = {}) => {
       const items = dbRef.current.item;
       const ids = new Set([id]);
       let grew = true;
@@ -251,6 +251,7 @@ export function useDatabase(enabled) {
         .map((it) => ({ before: it, after: { ...it, blocked_by: it.blocked_by.filter((b) => !ids.has(b)) } }));
       removeMany("item", [...ids]);
       if (fixes.length) putMany(fixes.map((f) => ({ kind: "item", data: f.after })));
+      if (quiet) return;
       setToast({
         id: uid(),
         text: `Deleted “${items[id].title}”${ids.size > 1 ? ` and ${ids.size - 1} sub-item${ids.size > 2 ? "s" : ""}` : ""}`,

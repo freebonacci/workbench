@@ -91,7 +91,7 @@ function ItemSearch({ exclude = () => false, onPick, placeholder, onClose, kinds
 }
 
 /* ---------------- the edit pop-up ---------------- */
-export function ItemEditor({ id, onClose }) {
+export function ItemEditor({ id, fresh, onClose: close }) {
   const { db, updateItem, addBlocker, deleteItem, create, patch } = useDB();
   const { openItem } = useApp();
   const items = db.item;
@@ -100,6 +100,11 @@ export function ItemEditor({ id, onClose }) {
   const [newSub, setNewSub] = useState("");
   const [showHist, setShowHist] = useState(false);
   if (!it) return null;
+  // a brand-new item closed without a title isn't worth keeping
+  const onClose = () => {
+    if (fresh && !(it.title || "").trim() && !(it.notes || "").trim()) deleteItem(it.id, { quiet: true });
+    close();
+  };
   const idx = childrenIndex(items);
   const kids = idx[it.id] || [];
   const deps = (dependentsIndex(items)[it.id] || []).map((d) => items[d]).filter(Boolean);
@@ -135,7 +140,7 @@ export function ItemEditor({ id, onClose }) {
       <div className="editor">
         <div className="title-row">
           {!isTask && <InlineInput className="emoji-in" value={it.emoji} onCommit={(v) => up({ emoji: v.trim() })} placeholder="🙂" />}
-          <AutoText className="title-in" minRows={1} value={it.title} onChange={(v) => up({ title: v.replace(/\n/g, " ") })} />
+          <AutoText className="title-in" minRows={1} autoFocus={fresh} placeholder="What needs doing?" value={it.title} onChange={(v) => up({ title: v.replace(/\n/g, " ") })} />
         </div>
 
         {isTask && (
