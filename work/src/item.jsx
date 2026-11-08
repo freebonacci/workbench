@@ -249,11 +249,12 @@ export function ItemEditor({ id, fresh, onClose: close }) {
           <Field label={isTask ? "Sub-items" : "Items"}>
             <div className="subs">
               {kids
-                .filter((k) => k.status !== "complete")
+                .filter((k) => k.status !== "complete" && k.status !== "someday")
                 .map((k) => (
-                  <TaskRow key={k.id} it={k} expandable={false} />
+                  <TaskRow key={k.id} it={k} />
                 ))}
               <input className="add-input" placeholder="+ Add (press Enter)" value={newSub} onChange={(e) => setNewSub(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addSub()} />
+              {kids.some((k) => k.status === "someday") && <div className="muted small">💤 {kids.filter((k) => k.status === "someday").length} parked on the Someday page</div>}
               {kids.some((k) => k.status === "complete") && <div className="muted small">{kids.filter((k) => k.status === "complete").length} completed — see the Completed page</div>}
             </div>
           </Field>

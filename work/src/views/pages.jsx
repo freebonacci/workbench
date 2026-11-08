@@ -71,11 +71,12 @@ export function Priorities() {
   const stats = (sid) => {
     const ts = descendants(items, sid, idx).filter((d) => d.kind === "task");
     const done = ts.filter((t) => t.status === "complete").length;
-    const open = ts.filter((t) => !isClosed(items, t));
+    const open = ts.filter((t) => !isClosed(items, t) && t.status !== "someday");
+    const top = open.filter((t) => t.parent_id === sid).length;
     const over = open.filter((t) => t.due && t.due < today).length;
     const next = open.filter((t) => t.due && t.due >= today).sort((a, b) => a.due.localeCompare(b.due))[0];
     const owners = [...new Set(open.flatMap((t) => t.owners || []))];
-    return { total: ts.length, done, open: open.length, over, next, owners };
+    return { total: ts.filter((t) => t.status !== "someday").length, done, open: open.length, top, subs: open.length - top, over, next, owners };
   };
 
   return (
@@ -89,7 +90,7 @@ export function Priorities() {
       <div className="prio-grid">
         {pr.map((p, i) => {
           const linked = streams.filter((s) => (s.priority_ids || []).includes(p.id));
-          const agg = linked.map((s) => stats(s.id)).reduce((a, b) => ({ total: a.total + b.total, done: a.done + b.done, open: a.open + b.open, over: a.over + b.over }), { total: 0, done: 0, open: 0, over: 0 });
+          const agg = linked.map((s) => stats(s.id)).reduce((a, b) => ({ total: a.total + b.total, done: a.done + b.done, open: a.open + b.top, over: a.over + b.over }), { total: 0, done: 0, open: 0, top: 0, over: 0 });
           return (
             <div key={p.id} className={"prio" + (p.focus ? " focus" : "")}>
               <div className="prio-h">
@@ -119,7 +120,9 @@ export function Priorities() {
                         <span className="muted small">{area ? `${area.emoji || ""} ${area.title}` : ""}</span>
                       </div>
                       <div className="ps-m">
-                        <span>{st.open} open</span>
+                        <span title="Open items in this workstream (sub-items counted separately)">
+                          {st.top} open{st.subs ? ` (+${st.subs} sub-item${st.subs > 1 ? "s" : ""})` : ""}
+                        </span>
                         {st.over > 0 && <span className="over">{st.over} overdue</span>}
                         {st.next && (
                           <span>
